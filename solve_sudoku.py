@@ -89,27 +89,26 @@ def make_cnf_dimacs(sudoku_in, out_file):
 
             #NOTE: CONSTRAINT 3
             #in each row, column and 3x3 blok different numbers from 1 to 9
-            for j in range(1, 82):
-                if i < j:
-                    #CODING: same, number2 with 4-bits q4q3q3q1
-                    q4 = 4*j - 3
-                    q3 = q4 + 1
-                    q2 = q4 + 2
-                    q1 = q4 + 3
-                    q = [q4, q3, q2, q1]
+            for j in range(i+1, 82):
+                #CODING: same, number2 with 4-bits q4q3q3q1
+                q4 = 4*j - 3
+                q3 = q4 + 1
+                q2 = q4 + 2
+                q1 = q4 + 3
+                q = [q4, q3, q2, q1]
 
-                    #row
-                    if (i-1)//9 == (j-1)//9:
-                        print_different_num_cnf(f, p, q)
-                        clauses_number += 9
-                    #column
-                    elif (i-1)%9 == (j-1)%9:
-                        print_different_num_cnf(f, p, q)
-                        clauses_number += 9
-                    #3x3 block
-                    elif (((i-1)//9)//3, ((i-1)%9)//3) == (((j-1)//9)//3, ((j-1)%9)//3):
-                        print_different_num_cnf(f, p, q)
-                        clauses_number += 9
+                #row
+                if (i-1)//9 == (j-1)//9:
+                    print_different_num_cnf(f, p, q)
+                    clauses_number += 9
+                #column
+                elif (i-1)%9 == (j-1)%9:
+                    print_different_num_cnf(f, p, q)
+                    clauses_number += 9
+                #3x3 block
+                elif (((i-1)//9)//3, ((i-1)%9)//3) == (((j-1)//9)//3, ((j-1)%9)//3):
+                    print_different_num_cnf(f, p, q)
+                    clauses_number += 9
 
     insert(out_file, f"p cnf {81*4} {clauses_number}")
 
