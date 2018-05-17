@@ -3,7 +3,7 @@ Modeling sudoku in dimacs CNF and solving with minisat.
 
 ## Requirements
 
-- python 3
+- python 3.6.x
 - minisat http://minisat.se/
 
 ## Usage
