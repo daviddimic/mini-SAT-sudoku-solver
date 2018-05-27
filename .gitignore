@@ -106,3 +106,4 @@ venv.bak/
 out_sudoku.txt
 out_sudoku.cnf
 sat_sudoku_solution.txt
+.swp

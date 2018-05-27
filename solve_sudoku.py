@@ -20,21 +20,19 @@ def read_sudoku_from_file():
         sys.exit(e)
 
 
-def num_to_cnf(cnf_var, num, reverse):
+def num_to_cnf(cnf_var, num, invert):
     """
     convert number to cnf clause
     num: 5 -> 0101
     cnf_var: 1 2 3 4
     ----------------
-    mew_clause: -1 2 -3 4
-    if reverse = True -> 1 -2 3 -4 (replace all 0 with 1)
+    new_clause: -1 2 -3 4
+    if invert = True -> 1 -2 3 -4 (replace all 0 with 1)
     """
-    new_clause = []
-    s = -1 if reverse else 1
-    new_clause.append(-s*cnf_var[0] if num//8 % 2 == 0 else s*cnf_var[0])
-    new_clause.append(-s*cnf_var[1] if num//4 % 2 == 0 else s*cnf_var[1])
-    new_clause.append(-s*cnf_var[2] if num//2 % 2 == 0 else s*cnf_var[2])
-    new_clause.append(-s*cnf_var[3] if num    % 2 == 0 else s*cnf_var[3])
+    s = -1 if invert else 1
+    #list of binary digits from num, same length as cnf_var
+    bin_list = map(lambda t: int(t), bin(num)[2:].zfill(len(cnf_var)))
+    new_clause = [*map(lambda t: s*t[0] if t[1] else -s*t[0], zip(cnf_var, bin_list))]
     return new_clause
 
 
