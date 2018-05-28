@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys, os, math
 
 def read_sudoku_from_file():
     args = sys.argv
@@ -13,7 +13,7 @@ def read_sudoku_from_file():
             sudoku_in = []
             for line in f.readlines():
                 #converting string line from file to integer list
-                int_line = list(map(lambda t: int(t), list(line.replace(' ', '').replace('\n', ''))))
+                int_line = list(map(lambda t: int(t), line.replace('\n', '').split()))
                 sudoku_in.append(int_line)
             return sudoku_in
     except Exception as e:
@@ -37,15 +37,16 @@ def num_to_cnf(cnf_var, num, invert):
 
 
 #add constraint: p and q must be different
-def print_different_num_cnf(f, p, q):
-    for num in range(1, 10):
+def print_different_num_cnf(fp, p, q, n):
+    for num in range(1, n+1):
         for p1 in num_to_cnf(p, num, True):
-            f.write(f"{p1} ")
+            fp.write(f"{p1} ")
         for q1 in num_to_cnf(q, num, True):
-            f.write(f"{q1} ")
-        f.write("0\n")
+            fp.write(f"{q1} ")
+        fp.write("0\n")
 
 
+#write at the beginning of file
 def insert(originalfile, string):
     with open(originalfile,'r') as f:
         with open('newfile.txt','w') as f2:
@@ -56,19 +57,21 @@ def insert(originalfile, string):
 
 def make_cnf_dimacs(sudoku_in, out_file):
     clauses_number = 0
+    #dimension of puzzle and minimal number of bits to represent one number
+    n = len(sudoku_in[0])
+    block = int(math.sqrt(n))
+    num_of_bits = len(bin(n)[2:])
+
     with open(out_file, "w") as f:
-        for i in range(1, 82):
-            #CODING: each number is represented with 4-bits p4p3p3p1
-            p4 = 4*i - 3
-            p3 = p4 + 1
-            p2 = p4 + 2
-            p1 = p4 + 3
-            p = [p4, p3, p2, p1]
+        for i in range(1, n*n+1):
+            #LOG CODING: each number is represented with n-bits (num_of_bits) pn pn-1 ... p1
+            p = [num_of_bits*i - (num_of_bits-1) + offset for offset in range(num_of_bits)]
 
             #NOTE: CONSTRAINT 1
-            #valid numbers in sudoku: from 1 to 9
+            #valid numbers in sudoku: from 1 to n
             #restrict all other numbers that can be produced with our coding
-            forbidden_numbers = [0, 10, 11, 12, 13, 14, 15]
+            forbidden_numbers = [*range(n+1, 1 << num_of_bits)]
+            forbidden_numbers.append(0)
             for num in forbidden_numbers:
                 for j in num_to_cnf(p, num, True):
                     f.write(f"{j} ")
@@ -77,70 +80,75 @@ def make_cnf_dimacs(sudoku_in, out_file):
 
             #NOTE: CONSTRAINT 2
             #add numbers from given input sudoku
-            #converting serial number (1-81) to index (i, j)
-            curr_num = sudoku_in[(i-1)//9][(i-1)%9]
+            #converting serial number (1-n*n) to index (i, j)
+            curr_num = sudoku_in[(i-1)//n][(i-1)%n]
             if curr_num != 0:
-                #add all none-zero numbers
+                #add all non-zero numbers
                 for j in num_to_cnf(p, curr_num, False):
                     f.write(f"{j} 0\n")
                     clauses_number += 1
 
             #NOTE: CONSTRAINT 3
-            #in each row, column and 3x3 blok different numbers from 1 to 9
-            for j in range(i+1, 82):
-                #CODING: same, number2 with 4-bits q4q3q3q1
-                q4 = 4*j - 3
-                q3 = q4 + 1
-                q2 = q4 + 2
-                q1 = q4 + 3
-                q = [q4, q3, q2, q1]
+            #in each row, column and block different numbers from 1 to n
+            for j in range(i+1, n*n+1):
+                #LOG CODING
+                q = [num_of_bits*j - (num_of_bits-1) + offset for offset in range(num_of_bits)]
 
                 #row
-                if (i-1)//9 == (j-1)//9:
-                    print_different_num_cnf(f, p, q)
-                    clauses_number += 9
+                if (i-1)//n == (j-1)//n:
+                    print_different_num_cnf(f, p, q, n)
+                    clauses_number += n
                 #column
-                elif (i-1)%9 == (j-1)%9:
-                    print_different_num_cnf(f, p, q)
-                    clauses_number += 9
-                #3x3 block
-                elif (((i-1)//9)//3, ((i-1)%9)//3) == (((j-1)//9)//3, ((j-1)%9)//3):
-                    print_different_num_cnf(f, p, q)
-                    clauses_number += 9
+                elif (i-1)%n == (j-1)%n:
+                    print_different_num_cnf(f, p, q, n)
+                    clauses_number += n
+                #block
+                elif (((i-1)//n)//block, ((i-1)%n)//block) == (((j-1)//n)//block, ((j-1)%n)//block):
+                    print_different_num_cnf(f, p, q, n)
+                    clauses_number += n
 
-    insert(out_file, f"p cnf {81*4} {clauses_number}")
+    insert(out_file, f"p cnf {n*n*num_of_bits} {clauses_number}")
+    return n
 
 
-def decode_output(sat_output):
-    #open output file with sat-solver solution
+def ksplit(line, sep, k):
+    """
+    Split string at every k occurrence of sep,
+    using sep as the delimiter string.
+    """
+    line = line.split(sep)
+    return [line[i:i+k] for i in range(0, len(line), k)]
+
+
+def cnf_to_num(cnf_clause):
+    """
+    Inverse of `num_to_cnf` function
+    convert cnf clause to number
+    from [-1 2 -3 4] to 5
+    """
+    str_bin = [*map(lambda digit: '1' if int(digit) > 0 else '0' , cnf_clause)]
+    return int(''.join(str_bin),2)
+
+
+def decode_output(sat_output, n):
+    num_of_bits = len(bin(n)[2:])
+
+    #open output file with minisat solution
     with open(sat_output, "r") as f:
         solution = f.read()
-        decoded_solution = []
+    if solution[:3] != 'SAT':
+        sys.exit(0)
 
-        if solution[:3] != 'SAT':
-            sys.exit(0)
-
-        #decoding solution, for example: convert -a b -c d -> 0101 -> 5
-        solution = solution.replace('0\n', '').replace('SAT\n', '').split()
-        decoded_num = ''
-        for ind, num in enumerate(solution):
-            #4 numbers convert to one
-            if ind % 4 == 0:
-                if decoded_num != '':
-                    decoded_solution.append(int(decoded_num, 2))
-                decoded_num = ''
-            decoded_digit = '0' if int(num) < 0 else '1'
-            decoded_num += decoded_digit
-        decoded_solution.append(int(decoded_num, 2))
-
-        #print decoded solution as matrix
-        out_sudoku = "out_sudoku.txt"
-        with open(out_sudoku, "w") as g:
-            for i, num in enumerate(decoded_solution):
-                g.write(f"{num} ")
-                if (i+1) % 9 == 0:
-                    g.write("\n")
-
+    #clean string solution
+    solution = solution.replace(' 0\n', '').replace('SAT\n', '')
+    #decode and write sa matrix
+    out_sudoku = "out_sudoku.txt"
+    with open(out_sudoku, "w") as g:
+        for i, cnf_num in enumerate(ksplit(solution, ' ', num_of_bits)):
+            num = cnf_to_num(cnf_num)
+            g.write(f"{num} ")
+            if (i+1) % n == 0:
+                g.write("\n")
 
 
 def main():
@@ -148,7 +156,7 @@ def main():
     out_file = "out_sudoku.cnf"
 
     #NOTE: modeling solution
-    make_cnf_dimacs(sudoku_in, out_file)
+    n = make_cnf_dimacs(sudoku_in, out_file)
 
     #NOTE: solving
     #call sat-solver `minisat`
@@ -156,7 +164,7 @@ def main():
     os.system(f"minisat {out_file} {sat_output}")
 
     #NOTE: decode and print to file
-    decode_output(sat_output)
+    decode_output(sat_output, n)
 
 
 if __name__ == "__main__":
