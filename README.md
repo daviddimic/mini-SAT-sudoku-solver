@@ -12,9 +12,9 @@ Modeling sudoku in dimacs CNF and solving with minisat.
 
 ## Input
 
-In `in_sudoku.txt` is matrix 9x9: with numbers 1-9 or 0 for unknown values.
+In `in_sudoku.txt` is matrix nxn: with numbers 1-n or 0 for unknown values.
 
 ## Output
-- `out_sudoku.cnf` input sudoku in dimacs cnf format
+- `out_sudoku.cnf` cnf output is input sudoku for minisat in dimacs cnf format
 - `sat_sudoku_solution.txt` output of minisat
-- `out_sudoku.txt` solved sudoku represented as 9x9 matrix, if solvable.
+- `out_sudoku.txt` decoded sat_sudoku_solution.txt. Solved sudoku represented as nxn matrix, if solvable.
