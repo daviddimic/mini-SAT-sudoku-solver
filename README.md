@@ -8,11 +8,12 @@ Modeling sudoku in dimacs CNF and solving with minisat.
 
 ## Usage
 
-`python3 solve_sudoku.py in_sudoku.txt`
+`python3 solve_sudoku.py input_test/in_25x25_sudoku_1.txt`
 
 ## Input
 
-In `in_sudoku.txt` is matrix nxn: with numbers 1-n or 0 for unknown values.
+In `input_test` folder is examples of input sudoku represented as nxn matrix with numbers 1-n or 0 for unknown values. `in_nxn_sudoku_k.txt` for n 9, 16, 25.
+
 
 ## Output
 - `out_sudoku.cnf` cnf output is input sudoku for minisat in dimacs cnf format
